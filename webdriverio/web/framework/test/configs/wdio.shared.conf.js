@@ -1,7 +1,6 @@
 const {ConfigParser} = require('@wdio/config');
 const {ensureFileSync, readFileSync, removeSync, writeFileSync} = require('fs-extra');
 const {parseSync, transformFromAstSync} = require('@babel/core');
-const { Parser } = require("acorn");
 const {cloneDeep} = require('lodash');
 
 exports.config = {
@@ -37,91 +36,45 @@ exports.config = {
         helpers: [require.resolve('@babel/register')],
     },
     services: [],
-    onPrepare: (config, capabilities) => {
+    onPrepare: (config) => {
         const configParser = new ConfigParser();
 
+        // Get the specs
         const specs = config.specs;
         const exclude = config.exclude;
         const currentSpecs = configParser.getSpecs(specs, exclude);
+
+        // Make a copy of the original spec and empty the current one
         config.originalSpecs = config.specs;
         config.specs=[];
 
-        console.log('==========================================================\n');
-        console.log(' Start parsing specs\n');
-        console.log('=============================\n');
-        console.log(' Config specs = ', specs);
-        console.log(' CurrentSpecs = ', currentSpecs);
-
+        // Now iterate over each spec and split it into single it's per file
         currentSpecs.forEach(spec => {
             const file = readFileSync(spec, 'utf8');
+            // @TODO: this is crappy, but enough for an initial POC
             const singleDescribe = file.match(/(describe\()/g).length === 1;
-            console.log(` Parse spec-file: ${spec}`);
-            console.log(` Holds a single describe: ${singleDescribe}`);
+
             if (singleDescribe) {
-                // cut file into single it's?
-                const amountOfTests = file.match(/(it\()/g).length;
-                console.log(` Amount of tests: ${amountOfTests}`);
                 const ast = parseSync(file);
-                // console.log('ast = ', JSON.stringify(ast, null, 2));
                 const describeIndex = findDescribeIndex(ast);
-                console.log('describeIndex = ', describeIndex)
                 const itIndexes = findItIndex(ast.program.body[describeIndex]);
-                console.log('itIndexes = ', itIndexes);
 
-                foo(ast, describeIndex, itIndexes, spec);
-                itIndexes.forEach(currentItIndex => config.specs.push(`${spec}.${currentItIndex}.js`))
-
-                // itIndexes.forEach((currentItIndex) => {
-                //     console.log('currentItIndex = ', currentItIndex)
-                //     const describe = ast.program.body[describeIndex];
-                //     let describeArgs = describe.expression.arguments[1].body.body
-                //     // const it = describeArgs[currentItIndex];
-                //     // console.log('it = ',JSON.stringify(it, null, 2))
-                //     // console.log('describeArgs = ',describeArgs)
-                //     // console.log('it = ',it)
-                //
-                //     // console.log('describeArgs.length = ', describeArgs.length)
-                //     const removedIts = describeArgs.filter((arg, index) => {
-                //         return index === currentItIndex || !itIndexes.includes(index);
-                //     });
-                //
-                //     describe.expression.arguments[1].body.body = removedIts
-                //
-                //     console.log('describeArgs = ', describe.expression.arguments[1].body.body)
-                //
-                //     // // need to remove the other it's so if it is [1,2,3] and we are a currentItIndex 2 we need to remove 1 and 3
-                //     // const describe = ast.program.body[describeIndex];
-                //     //
-                //     // console.log('describe = ', describe)
-                //     // const newAst = {
-                //     //     ...ast,
-                //     //     program: {
-                //     //         ...ast.program,
-                //     //         body: ast.program.filter((_node, index) => !itIndexes.includes(index) || index === currentItIndex),
-                //     //     },
-                //     // };
-                //     // const newCode = transformFromAstSync(newAst).code;
-                //     // console.log(newCode);
-                //     // console.log('----');
-                // });
+                // Now do the magic
+                createSingleItFiles(ast, describeIndex, itIndexes, spec);
+                // Push the new specs into the config
+                itIndexes.forEach(currentItIndex => config.specs.push(`${spec}.${currentItIndex}.js`));
             } else {
                 console.log(` WARNING, THIS SPEC FILE: ${spec}
  CONTAINS MULTIPLE DESCRIBES AND CAN NOT BE SPLIT!`
                 );
+                config.specs.push(spec);
             }
-            console.log('=============================\n');
-
-            // console.log('singleDescribe = ', singleDescribe)
-            // console.log('file = ', file);
         });
-        console.log('\n==========================================================');
     },
 
     onComplete: (exitCode, config)=>{
-        config.specs.forEach(spec=> {
-            console.log('spec = ', spec)
-            removeSync(spec)
-        })
+        // When done remove the files and clean up the config.specs
+        config.specs.forEach(spec=> removeSync(spec));
         config.specs = config.originalSpecs;
         delete config.originalSpecs;
     }
@@ -135,7 +88,6 @@ const isCallToDescribe = (node) =>
     && node.expression.type === 'CallExpression'
     && node.expression.callee.type === 'Identifier'
     && node.expression.callee.name.toLowerCase() === 'describe';
-
 const findDescribeIndex = (ast) =>
     ast.program.body.reduce((array, node, index) => isCallToDescribe(node) ? [...array, index] : array, []);
 
@@ -147,15 +99,12 @@ const isCallToIt = (node) =>
     && node.expression.type === 'CallExpression'
     && node.expression.callee.type === 'Identifier'
     && node.expression.callee.name.toLowerCase() === 'it';
-
-// Always the second in the body
 const findItIndex = (body) =>
     body.expression.arguments[1].body.body.reduce((array, node, index) => isCallToIt(node) ? [...array, index] : array, []);
 
 
-const foo = (ast, describeIndex, itIndexes, spec)=> {
+const createSingleItFiles = (ast, describeIndex, itIndexes, spec)=> {
     itIndexes.forEach((currentItIndex) => {
-        // https://medium.com/javascript-in-plain-english/how-to-deep-copy-objects-and-arrays-in-javascript-7c911359b089
         const newAst = cloneDeep(ast);
         // Get the describe
         const describe = newAst.program.body[describeIndex];
@@ -170,7 +119,5 @@ const foo = (ast, describeIndex, itIndexes, spec)=> {
         const newCode = transformFromAstSync(newAst).code;
         ensureFileSync(`${spec}.${currentItIndex}.js`);
         writeFileSync(`${spec}.${currentItIndex}.js`, newCode);
-        // console.log(newCode);
-        console.log('----');
     });
 }
