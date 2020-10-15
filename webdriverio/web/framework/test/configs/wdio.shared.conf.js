@@ -19,7 +19,7 @@ exports.config = {
     // ===================
     logLevel: 'silent',
     bail: 0,
-    baseUrl: 'https://www.saucedemo.com/',
+    baseUrl: 'https://google.com',
     waitforTimeout: 10000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
