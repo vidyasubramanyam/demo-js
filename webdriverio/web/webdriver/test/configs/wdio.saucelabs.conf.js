@@ -38,63 +38,20 @@ config.capabilities = [
         ...chromeOptions,
     },
     {
-        browserName: 'firefox',
-        platformName: 'Windows 10',
-        browserVersion: 'latest',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-        },
-    },
-    {
-        browserName: 'internet explorer',
-        platformName: 'Windows 8.1',
-        browserVersion: 'latest',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-            iedriverVersion: '3.141.59',
-        },
-    },
-    {
-        browserName: 'MicrosoftEdge',
-        platformName: 'Windows 10',
-        browserVersion: '18.17763',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-        },
-    },
-    {
-        browserName: 'MicrosoftEdge',
-        platformName: 'Windows 10',
-        browserVersion: 'latest',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-        },
-    },
-    // Safari 11 is not W3C compliant,
-    // see https://developer.apple.com/documentation/webkit/macos_webdriver_commands_for_safari_11_1_and_earlier
-    {
         browserName: 'safari',
-        platform: 'macOS 10.13',
-        version: '11.1',
-        ...defaultBrowserSauceOptions,
+        platformName: 'iOS',
+        deviceName: 'iPhone 11 Simulator',
+        deviceOrientation: 'portrait',
+        platformVersion: '14.0',
+        name: 'testing-iphone'
     },
-    // Safari 13
     {
-        browserName: 'safari',
-        platformName: 'macOS 10.15',
-        browserVersion: 'latest',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-        },
-    },
-    // Safari 12
-    {
-        browserName: 'safari',
-        platformName: 'macOS 10.14',
-        browserVersion: 'latest',
-        'sauce:options': {
-            ...defaultBrowserSauceOptions,
-        },
+        browserName: 'chrome',
+        platformName: 'android',
+        deviceName: 'Google Pixel 3 GoogleAPI Emulator',
+        deviceOrientation: 'portrait',
+        platformVersion: '11.0',
+        name: 'testing-pixel'
     }
 ];
 
