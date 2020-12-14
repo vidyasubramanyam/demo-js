@@ -7,7 +7,7 @@ exports.config = {
     // Specify Test Files
     // ==================
     specs: [
-        './test/specs/**/*.js'
+        './test/specs/menu.spec.js'
     ],
     // ============
     // Capabilities
